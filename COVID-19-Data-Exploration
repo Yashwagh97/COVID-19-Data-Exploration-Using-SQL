@@ -1,0 +1,189 @@
+-- COVID-19-Data-Exploration-Using-SQL
+
+Finding the Dataset and Uploading it onto PGAdmin using PostgreSQL
+
+    The dataset is from https://ourworldindata.org/covid-deaths
+
+    The range of the data is from used is from Jan 28th 2020 to April 30th 2021
+
+        1. After the file was downloaded, I have split the data into two files.
+        2. These two files are CovidDeaths and CovidVaccinations, which are CSV Files
+        3. I will use PGAdmin, which is an Open-Source Platform for PostgreSQL
+        
+    Within PGAdmin
+        1. Create a Database called ‘COVID-19_Data_Exploration’
+        2. Within this Database, Create two tables called coviddeaths & covidvaccines.
+        3. To add the columns, I have pasted this query
+            
+            For coviddeath table, add the following columns
+            
+                    CREATE TABLE coviddeaths (
+                    iso_code varchar(255),
+                    continent varchar(255),
+                    location varchar(255),
+                    date TIMESTAMP WITHOUT TIME ZONE USING TO_DATE(date, 'DD/MM/YYYY'),
+                    population decimal(18, 6),
+                    total_cases decimal(18, 6),
+                    new_cases decimal(18, 6),
+                    new_cases_smoothed decimal(18, 6),
+                    total_deaths decimal(18, 6),
+                    new_deaths decimal(18, 6),
+                    new_deaths_smoothed decimal(18, 6),
+                    total_cases_per_million decimal(18, 6),
+                    new_cases_per_million decimal(18, 6),
+                    new_cases_smoothed_per_million decimal(18, 6),
+                    total_deaths_per_million decimal(18, 6),
+                    new_deaths_per_million decimal(18, 6),
+                    new_deaths_smoothed_per_million decimal(18, 6),
+                    reproduction_rate decimal(18, 6),
+                    icu_patients decimal(18, 6),
+                    icu_patients_per_million decimal(18, 6),
+                    hosp_patients decimal(18, 6),
+                    hosp_patients_per_million decimal(18, 6),
+                    weekly_icu_admissions decimal(18, 6),
+                    weekly_icu_admissions_per_million decimal(18, 6),
+                    weekly_hosp_admissions decimal(18, 6),
+                    weekly_hosp_admissions_per_million decimal(18, 6)
+                );
+
+          For covidvaccines table, add the following columns
+          
+                    CREATE TABLE covidvaccines (
+                    iso_code varchar(255),
+                    continent varchar(255),
+                    location varchar(255),
+                    date TIMESTAMP WITHOUT TIME ZONE USING TO_DATE(date, 'DD/MM/YYYY'),
+                    new_tests decimal(18, 6),
+                    total_tests decimal(18, 6),
+                    total_tests_per_thousand decimal(18, 6),
+                    new_tests_per_thousand decimal(18, 6),
+                    new_tests_smoothed decimal(18, 6),
+                    new_tests_smoothed_per_thousand decimal(18, 6),
+                    positive_rate decimal(18, 6),
+                    tests_per_case decimal(18, 6),
+                    tests_units varchar(255),
+                    total_vaccinations decimal(18, 6),
+                    people_vaccinated decimal(18, 6),
+                    people_fully_vaccinated decimal(18, 6),
+                    new_vaccinations decimal(18, 6),
+                    new_vaccinations_smoothed decimal(18, 6),
+                    total_vaccinations_per_hundred decimal(18, 6),
+                    people_vaccinated_per_hundred decimal(18, 6),
+                    people_fully_vaccinated_per_hundred decimal(18, 6),
+                    new_vaccinations_smoothed_per_million decimal(18, 6),
+                    stringency_index decimal(18, 6),
+                    population_density decimal(18, 6),
+                    median_age decimal(18, 6),
+                    aged_65_older decimal(18, 6),
+                    aged_70_older decimal(18, 6),
+                    gdp_per_capita decimal(18, 6),
+                    extreme_poverty decimal(18, 6),
+                    cardiovasc_death_rate decimal(18, 6),
+                    diabetes_prevalence decimal(18, 6),
+                    female_smokers decimal(18, 6),
+                    male_smokers decimal(18, 6),
+                    handwashing_facilities decimal(18, 6),
+                    hospital_beds_per_thousand decimal(18, 6),
+                    life_expectancy decimal(18, 6),
+                    human_development_index decimal(18, 6)
+                );
+
+
+        4. Using the above SQL statements, add the columns into the tables
+        5. After this process, upload the csv files into each table to upload the data.
+        
+        DATA Exploration Begins
+        
+-- Here we are viewing all the data within CovidDeaths.
+-- The WHERE clause removes nulls in the continent column,
+-- which prevents the continent from appearing in the location column.
+SELECT *
+FROM CovidDeaths
+WHERE continent IS NOT NULL
+ORDER BY 3, 4;
+
+-- Selecting the data that we are going to use.
+SELECT location, date, total_cases, new_cases, total_deaths, population
+FROM CovidDeaths
+WHERE continent IS NOT NULL
+ORDER BY 1, 2;
+
+-- Analyzing total cases vs total deaths as a percentage in the United States.
+-- Shows the likelihood of dying if you contract Covid in your country.
+SELECT location, date, total_cases, total_deaths, (total_deaths / total_cases) * 100 AS death_percentage
+FROM CovidDeaths
+WHERE location ILIKE '%states%' AND total_cases IS NOT NULL AND total_deaths IS NOT NULL AND continent IS NOT NULL
+ORDER BY 1, 2;
+
+-- Analyzing total cases vs population in the United States.
+-- Shows the percentage of the population that contracted Covid.
+SELECT location, date, population, total_cases, (total_cases / population) * 100 AS percent_population_infected
+FROM CovidDeaths
+WHERE location ILIKE '%states%' AND total_cases IS NOT NULL AND continent IS NOT NULL
+ORDER BY 1, 2;
+
+-- Identifying countries with the highest infection rate compared to population.
+SELECT location, population, MAX(total_cases) AS highest_infection_count, MAX((total_cases / population)) * 100 AS percent_population_infected
+FROM CovidDeaths
+WHERE total_cases IS NOT NULL AND continent IS NOT NULL
+GROUP BY location, population
+ORDER BY 4 DESC;
+
+-- Showing countries with the highest death count per population.
+SELECT location, MAX(total_deaths) AS total_death_count
+FROM CovidDeaths
+WHERE total_deaths IS NOT NULL AND continent IS NOT NULL
+GROUP BY location
+ORDER BY total_death_count DESC;
+
+-- Breaking things down by continent.
+-- Analyzing total number of deaths in each continent.
+SELECT location, MAX(total_deaths) AS total_death_count
+FROM CovidDeaths
+WHERE continent IS NULL
+GROUP BY location
+ORDER BY total_death_count DESC;
+
+-- Worldwide numbers.
+SELECT SUM(new_cases) AS total_cases, SUM(new_deaths) AS total_deaths, (SUM(new_deaths) / SUM(new_cases)) * 100 AS death_percentage
+FROM CovidDeaths
+WHERE continent IS NOT NULL
+ORDER BY 1, 2;
+
+-- We want to join both tables by the location and date columns.
+-- Giving an alias to coviddeaths as "dea".
+-- Giving an alias to covidvaccines as "vac".
+SELECT *
+FROM coviddeaths AS dea
+JOIN covidvaccines AS vac
+	ON dea.location = vac.location
+	AND dea.date = vac.date;
+	
+-- Analyzing Total Population vs Vaccinations.
+-- Creating a cumulative SUM column called "RollingPeopleVaccinated".
+SELECT dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations,
+    SUM(vac.new_vaccinations) OVER (PARTITION BY dea.location ORDER BY dea.location, dea.date) AS RollingPeopleVaccinated
+FROM coviddeaths AS dea
+JOIN covidvaccines AS vac
+	ON dea.location = vac.location
+	AND dea.date = vac.date
+WHERE dea.continent IS NOT NULL
+ORDER BY 2, 3;
+
+
+-- Using a Common Table Expression (CTE).
+WITH PopvsVac (Continent, location, date, population, new_vaccinations, RollingPeopleVaccinated) AS 
+(
+  SELECT dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations,
+    SUM(vac.new_vaccinations) OVER (PARTITION BY dea.location ORDER BY dea.location, dea.date) AS RollingPeopleVaccinated
+  FROM coviddeaths AS dea
+  JOIN covidvaccines AS vac
+    ON dea.location = vac.location
+    AND dea.date = vac.date
+  WHERE dea.continent IS NOT NULL
+)
+SELECT *
+FROM PopvsVac;
+
+
+END OF DATA EXPLORATION
